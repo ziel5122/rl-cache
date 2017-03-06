@@ -1,52 +1,78 @@
+from math import pow
 from numpy import arange
 from numpy import random
 from random import randint
 
 class Cache:
 
-	def __init__(self, size, levels):
-		self.size = size
-		self.indices = [-1] * size
-		self.values = [0.0] * size
-		self.ages = range(0, size)
+	def __init__(self, level_min, num_levels):
+		self.levels = [level_min * 2 ** i for i in range(num_levels)]
+
+		self.size = sum(self.levels)
+		self.indices = [-1] * self.size
+		self.values = [0.0] * self.size
+		self.ages = range(self.size)
 
 		#reinforcement learning
 		self.frac_rand = 0.1
-		self.hit_reward = 1.0
-		self.miss_reward = -1.0
-		self.init_value = 0.0
+		self.hit_reward = 2.0
+		self.miss_reward = 0.0
+		self.init_value = 1.0
 		self.alpha = 0.2
 		self.gamma = 0.2
 
 		self.states = {}
-		for i in range(0, levels[0]+1):
-			for j in range(0, levels[1]+1):
-				self.states[(i,j,size-i-j)] = self.init_value
+		self.buildStates(num_levels)
 
 		print(self.states)
 
+	def buildStates(self, num_levels, level=0, state=[]):
+		if (level == num_levels-1):
+			state.append(self.size - sum(state))
+			self.states[tuple(state)] = self.init_value
+			print(state)
+			return
+
+		for i in range(self.levels[level]+1):
+			state_copy = state + [i]
+			self.buildStates(num_levels, level+1, state_copy)
+
+	def incAges(self):
+		self.ages = list(map(lambda x: x+1, self.ages))
+
 	def insert(self, i, x):
-		state = self.state()
+		self.incAges()
+		state0 = self.state()
+		print(state0)
+		new_states = []
+		for i in range(len(self.levels)):
+			if (state0[i] == 0): continue
+			state_copy = list(state0)
+			state_copy[i] - 1
+			state_copy[0] + 1
+			new_states.append(tuple(state_copy))
 
-		print(tuple([state[0]+1,state[1],state[2]-1]))
-
-		new states = [state, tuple([state[0]+1,state[1]-1,state[2]]), tuple([state[0]+1,state[1],state[2]-1])]
 		print(new_states)
-		#new_state = self.states[random.choice(new_state,p=(self.states[new_states[0]],self.states[new_states[1]],self.states[new_states[2]]))]
 
-		#indices = [i for i, x in enumerate(my_list) if x == 2 or x == 3 or x == 4 or x == 5]
-
-		#print(indices)
+		probs = [self.states[new_states[i]] for i in range(len(new_states))]
+		probs_total = sum(probs)
+		probs = list(map(lambda x: x/probs_total, probs))
+		new_index = random.choice(range(len(new_states)), p=probs)
+		print(new_states[new_index])
 
 	def lookup(self, i):
 		try:
-			return self.values[self.indices.index(i)]
+			index = self.indices.index(i)
+			self.ages[index] = 0
+			return self.values[index]
 		except ValueError:
 			return -1
 
 	def state(self):
-		cache_ages = [0] * 3
+		cache_ages = [0] * len(self.levels)
 		for i in range(len(self.ages)):
-			age = 0 if self.ages[i] < 2 else 1 if self.ages[i] < 6 else 2
-			cache_ages[age] += 1
+			for j in range(len(self.levels)):
+				if (self.ages[i] < self.levels[j]):
+					cache_ages[j] += 1
+					break
 		return tuple(cache_ages)
