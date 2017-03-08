@@ -21,7 +21,7 @@ def get(i, num_hits, num_misses, data_size):
 	x = cache.lookup(i)
 
 	#cache miss
-	if (x < 1):
+	if (x < 0):
 		num_misses += 1
 		x = data[i]
 		cache.insert(i, x)

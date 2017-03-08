@@ -16,8 +16,10 @@ class Cache:
 		self.indices = [-1] * self.size
 		self.values = [0.0] * self.size
 		self.ages = range(self.size)
-		self.tiers = list(map(self.getTier, self.ages))
-		self.state = self.getState()
+		self.tiers = []
+		self.updateTiers()
+		self.state = tuple()
+		self.updateState()
 
 		#reinforcement learning
 		self.frac_rand = 0.1
@@ -33,27 +35,18 @@ class Cache:
 	def applyState(self, old_state, new_state, index, value):
 		if (old_state == new_state): return
 		diff = list(subtract(new_state, old_state))
-		print(diff)
 		tier = diff.index(-1)
-		print(tier)
 		is_tier = list(map(lambda x: 1 if x == tier else 0, self.tiers))
-		print(self.tiers)
-		print(is_tier)
 		is_tier = list(map(lambda x: x / sum(is_tier), is_tier))
 		replace = random.choice(
 			range(len(self.ages)),
 			p=is_tier
 		)
-		print(self.tiers)
-		print(replace)
 		self.indices[replace] = index
 		self.values[replace] = value
 		self.ages[replace] = 0
-		print(self.ages)
-		self.tiers = list(map(self.getTier, self.ages))
-		self.state = self.getState()
-		print(self.state)
-		print()
+		self.updateTiers()
+		self.updateState()
 
 	def buildStates(self, num_levels, level=0, state=[]):
 		if (level == num_levels-1):
@@ -72,23 +65,16 @@ class Cache:
 			i += 1
 		return i
 
-	def getState(self):
-		state = [0] * len(self.levels)
-		for tier in self.tiers:
-			state[tier] += 1
-		return tuple(state)
-
 	def incAges(self):
 		self.ages = list(map(lambda x: x+1, self.ages))
-		self.tiers = list(map(self.getTier, self.ages))
-		self.state = self.getState()
 
 	def insert(self, index, value):
-		print(self.ages)
 		self.incAges()
+		self.updateTiers()
+		self.updateState()
 		state0 = self.state
 		new_states = []
-		print(state0)
+
 		for i in range(len(self.levels)):
 			if (state0[i] == 0): continue
 			state_copy = list(state0)
@@ -96,19 +82,28 @@ class Cache:
 			state_copy[0] += 1
 			new_states.append(tuple(state_copy))
 
-		print(new_states)
 		probs = [self.states[new_states[i]] for i in range(len(new_states))]
 		probs_total = sum(probs)
 		probs = list(map(lambda x: x/probs_total, probs))
 		new_index = random.choice(range(len(new_states)), p=probs)
-		print(new_states[new_index])
-		print()
 		self.applyState(new_states[0], new_states[new_index], index, value)
 
 	def lookup(self, i):
 		try:
 			index = self.indices.index(i)
+			self.incAges()
 			self.ages[index] = 0
+			self.updateTiers()
+			self.updateState()
 			return self.values[index]
 		except ValueError:
 			return -1
+
+	def updateState(self):
+		state = [0] * len(self.levels)
+		for tier in self.tiers:
+			state[tier] += 1
+		self.state = tuple(state)
+
+	def updateTiers(self):
+		self.tiers = list(map(self.getTier, self.ages))
