@@ -1,3 +1,7 @@
 dependencies:
   pre:
     - pip install numpy
+
+machine:
+  python:
+    version: 3.6.0
