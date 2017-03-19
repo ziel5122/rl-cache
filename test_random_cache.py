@@ -14,7 +14,7 @@ class TestRandomCache(TestCase):
         self.assertEqual(len(self.cache.data), self.cache_size)
         
         self.assertEqual(self.cache.addr, [-1] * self.cache_size)
-        self.assertEqual(self.cache.data, [0] * self.cache_size)
+        self.assertEqual(self.cache.data, [0.0] * self.cache_size)
         
     def test_lookup(self):
         self.assertEqual(self.cache.lookup(-1), 0)
