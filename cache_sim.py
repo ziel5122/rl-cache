@@ -98,12 +98,15 @@ def main():
     j = int(data_size / 2)
     #run trials
     for i in range(args.num_accesses):
+        '''
     	j += move_size[randint(0, move_len-1)]
-
-    	if (j < 0): j = 0
-    	elif (j >= data_size): j = data_size-1
-
-    	num_hits, num_misses = get(cache, data, j, num_hits, num_misses)
+    	if (j < 0):
+            j = 0
+        elif (j >= data_size):
+            j = data_size-1
+        '''
+        j = randint(0, data_size-1)
+        num_hits, num_misses = get(cache, data, j, num_hits, num_misses)
 
     print("hits: " + str(num_hits))
     print('misses: ' + str(num_misses))

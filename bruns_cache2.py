@@ -114,7 +114,7 @@ class RLCache:
 def main():
     cache_size = 5
     data_size = 100
-    num_accesses = 100000
+    num_accesses = 10000000
     cd = RLCache(cache_size, data_size)
 
     move_size = [-3,-2,-1,0,0,0,0,1,2,3]
@@ -128,9 +128,12 @@ def main():
             j = data_size - 1
         cd.get(j)
 
-    for pair in cd.st_val:
-        print(pair, cd.st_val[pair])
-    print("hit ratio: ", cd.nhits/(cd.nhits + cd.nmisses))
+        for pair in cd.st_val:
+            print(str(pair) + ':' + str(cd.st_val[pair]), end=" ")
+        print()
+
+
+    #print("hit ratio: ", cd.nhits/(cd.nhits + cd.nmisses))
 
 if __name__ == '__main__':
     main()
