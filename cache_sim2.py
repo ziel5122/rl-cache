@@ -1,11 +1,17 @@
+from cachetools import LFUCache, LRUCache, RRCache
+from collections import Counter
 import numpy as np
 import math
 from random import randint
 from random import random
+from sets import Set
+import sys
 
 # a cache with a reinforcement learning replacement policy
 class RLCache:
     def __init__(self, cache_size, data_size):
+        self.min_pos = 100
+        self.min_neg = -100
         self.nhits = 0
         self.nmisses = 0
         self.data_size = data_size
@@ -49,7 +55,26 @@ class RLCache:
     def re_update(self, source, reward, destination):
         src_val = self.st_val.get(source, self.init_value)
         dest_val = self.st_val.get(destination, self.init_value)
-        self.st_val[source] = src_val + self.alpha * (reward + self.gamma * dest_val - src_val)
+        future_val = src_val + self.alpha * (reward + self.gamma * dest_val - src_val)
+        self.st_val[source] = future_val
+        diff = future_val - src_val
+        '''
+        if diff > 0:
+            if diff < self.min_pos:
+                self.min_pos = diff
+                print(self.min_pos)
+                print(self.min_neg)
+                print(source)
+                print()
+        elif diff > self.min_neg:
+            self.min_neg = diff
+            print(self.min_pos)
+            print(self.min_neg)
+            print(source)
+            print()
+        '''
+        print("{0:.2f}".format(diff), source)
+        #self.st_val[source] = src_val + self.alpha * (reward + self.gamma * dest_val - src_val)
 
     # return a list of the abstract states that can be reached from this
     # state by a cache replacement operation.  The first element in the
@@ -111,29 +136,98 @@ class RLCache:
 
                 return x
 
+
+def run_optimal(cache_size, data, moves):
+    cache = [-1] * cache_size
+    hits = 0
+    data_size = len(data)
+    index = randint(0, data_size-1)
+    accesses = []
+    for move in moves:
+        index += move
+        if (index < 0):
+            index = 0
+        elif (index >= data_size):
+            index = data_size -1
+        accesses.append(index)
+
+    cache[0:cache_size] = accesses[0:cache_size]
+    misses = cache_size
+
+    for index, access in enumerate(accesses[cache_size:]):
+        if access in cache:
+            hits += 1
+        else:
+            misses += 1
+            next_access_time = []
+            for element in cache:
+                try:
+                    next_access_time.append(accesses[index:].index(element))
+                except ValueError:
+                    next_access_time.append(len(moves) + 1)
+            cache[next_access_time.index(max(next_access_time))] = access
+
+    print(hits, misses)
+
+def init(data_size=100, num_accesses=1000, std_dev=1):
+    moves = np.around(np.random.normal(0, std_dev, num_accesses)).astype(np.int)
+    i = randint(0, data_size-1)
+    accesses = []
+    for move in moves:
+        i = np.clip(i+move, 0, data_size-1)
+        accesses.append(i)
+    return accesses
+
+def run_cache(cache, accesses):
+    hits = 0
+    misses = 0
+    for access in accesses:
+        try:
+            cache[access]
+            hits += 1
+        except KeyError:
+            misses += 1
+            cache[access] = random()
+    return hits, misses
+
+def run_optimal(cache_size, accesses):
+    hits = 0
+    misses = 0
+    cache = Set()
+    for i, access in enumerate(accesses):
+        if access in cache:
+            hits += 1
+        else:
+            misses += 1
+            if len(cache) < cache_size:
+                cache.add(access)
+            else:
+                next_accesses = Counter()
+                for line in cache:
+                    try:
+                        next_accesses[line] = accesses[i+1:].index(line)
+                    except ValueError:
+                        next_accesses[line] = len(accesses)+1
+                index, next_access = next_accesses.most_common(1)[0]
+                cache.remove(index)
+                cache.add(access)
+    return hits, misses
+
 def main():
     cache_size = 5
     data_size = 100
-    num_accesses = 10000000
-    cd = RLCache(cache_size, data_size)
+    num_accesses = 1000
+    std_dev = 3
 
-    move_size = [-3,-2,-1,0,0,0,0,1,2,3]
-    j = math.floor(data_size/2)
-    for _ in range(num_accesses):
-        delta = move_size[randint(0, len(move_size)-1)]
-        j += delta
-        if j < 0:
-            j = 0
-        elif j >= data_size:
-            j = data_size - 1
-        cd.get(j)
+    accesses = init(data_size, num_accesses, std_dev)
 
-        for pair in cd.st_val:
-            print(str(pair) + ':' + str(cd.st_val[pair]), end=" ")
-        print()
+    optimal_hits, optimal_misses = run_optimal(cache_size, accesses)
 
+    cache = RRCache(cache_size)
+    cache_hits, cache_misses = run_cache(cache, accesses)
 
-    #print("hit ratio: ", cd.nhits/(cd.nhits + cd.nmisses))
+    print(optimal_hits, optimal_misses)
+    print(cache_hits, cache_misses)
 
 if __name__ == '__main__':
     main()
